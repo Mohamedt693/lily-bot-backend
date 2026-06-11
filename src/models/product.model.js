@@ -33,13 +33,12 @@ const productSchema = new mongoose.Schema({
         required: true, 
         enum: ['economy', 'medium', 'luxury'] 
     },
-    skinType: { 
-        type: String, 
-        required: true 
-    }, 
-    link: { 
-        type: String, 
-    },
+    skinType: [
+        { 
+            type: String, 
+            required: true 
+        }
+    ],
     origin: { 
         type: String, 
         required: true 

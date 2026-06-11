@@ -9,7 +9,7 @@ const PRODUCT_MESSAGES = {
   ERROR: {
     NOT_FOUND: "Product not found.",
     REQUIRED_FIELDS: "Please provide all required fields (name, description, category, budget, skinType, origin).",
-    INVALID_BUDGET: "Invalid budget level. Must be 'اقتصادي', 'متوسط', or 'فاخر'.",
+    INVALID_BUDGET: "Invalid budget level. Must be 'economy', 'medium', or 'luxury'.",
     SERVER_ERROR: "Internal server error while processing product data."
   }
 };
