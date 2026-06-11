@@ -66,4 +66,20 @@ const productSchema = new mongoose.Schema({
     timestamps: true 
 });
 
+productSchema.pre('findOneAndDelete', async function(next) {
+    try {
+        const productId = this.getQuery()._id;
+        
+        const PriceOffer = mongoose.model('PriceOffer');
+        
+        await PriceOffer.deleteMany({ product: productId });
+        
+        console.log(`🧹 Cleaned up PriceOffers for deleted product: ${productId}`);
+        next();
+    } catch (error) {
+        console.error("❌ Error deleting associated PriceOffers:", error);
+        next(error);
+    }
+});
+
 export const Product = mongoose.model('Product', productSchema);
