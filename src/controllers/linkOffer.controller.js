@@ -4,14 +4,13 @@ import { updatePrices } from "../utils/jobs/scraper.js";
 
 export const addLinkOffer = async (req, res) => {
     try {
-        const { productId, storeName, country, url, priceSelector, currency } = req.body;
+        const { productId, storeName, country, url, currency } = req.body;
 
         if (
             !productId ||
             !storeName ||
             !country ||
             !url ||
-            !priceSelector ||
             !currency
         ) {
             return res.error(LINK_OFFER_MESSAGES.ERROR.REQUIRED_FIELDS, 400);

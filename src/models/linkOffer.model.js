@@ -22,9 +22,10 @@ const LinkOfferSchema = new mongoose.Schema({
         required: true 
     },
     coupons: [
-        { 
-            type: String, 
-            trim: true 
+        {
+            code: String,
+            expiryDate: Date,
+            isActive: { type: Boolean, default: true }
         }
     ],
     currentPrice: { type: Number, default: 0 },
