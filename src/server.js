@@ -12,6 +12,8 @@ import consultationRoutes from './routes/consultation.routes.js';
 import productRoutes from './routes/product.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import linkOfferRoutes from './routes/linkOffer.routes.js';
+import priceHistoryRoutes from './routes/priceHistory.routes.js';
+import subscriberRoutes from './routes/subscriber.routes.js';
 
 dotenv.config();
 connectDB();
@@ -25,13 +27,15 @@ app.use(cors({
 app.use(express.json());
 app.use(responseHandler);
 
-app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', productRoutes);
-app.use('/api/dashboard/link-offers', linkOfferRoutes);
+app.use('/api/products', productRoutes);        
+app.use('/api/link-offers', linkOfferRoutes);   
+app.use('/api/price-history', priceHistoryRoutes); 
 app.use('/api', consultationRoutes);
+app.use('/api/subscribe', subscriberRoutes);
+app.use('/api/auth', authRoutes);
 
-cron.schedule('0 4 * * *', async () => {
-  console.log('⏰ Cron Job Triggered: Starting daily price synchronization...');
+cron.schedule('0 4 */2 * *', async () => {
+  console.log('⏰ Cron Job Triggered: Starting synchronization (Every 2 days)...');
   await updatePrices();
 });
 

@@ -3,18 +3,23 @@ import {
     addProduct, 
     getAllProducts, 
     getProductById, 
+    getProductBySlug,
     updateProduct, 
     deleteProduct
 } from '../controllers/product.controller.js';
+// middleware
 import { protectAdmin } from '../middlewares/auth.middleware.js';
+import { detectCountry } from '../middlewares/country.middleware.js';
 
 const router = express.Router();
 
 
-router.get('/products', getAllProducts);
-router.get('/products/:id', getProductById);
-router.post('/products', protectAdmin, addProduct);
-router.put('/products/:id', protectAdmin, updateProduct);
-router.delete('/products/:id', protectAdmin, deleteProduct);
+router.get('/', getAllProducts); 
+router.get('/slug/:slug', detectCountry, getProductBySlug); 
+router.get('/:id', getProductById); 
+
+router.post('/', protectAdmin, addProduct);
+router.put('/:id', protectAdmin, updateProduct);
+router.delete('/:id', protectAdmin, deleteProduct);
 
 export default router;

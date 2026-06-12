@@ -1,46 +1,74 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
-import pLimit from "p-limit"; 
+import pLimit from "p-limit";
+import UserAgent from 'user-agents';
 import { LinkOffer } from "../../models/linkOffer.model.js";
+import { PriceHistory } from "../../models/priceHistory.model.js";
+import { storeSelectors } from "./storeSelectors.js"; 
 import LINK_OFFER_MESSAGES from "../messages/linkOffer.messages.js";
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const updatePrices = async () => {
     try {
-        const offers = await LinkOffer.find({});
-        console.log(`🚀 Starting price scraping for ${offers.length} links...`);
+        const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+        const offers = await LinkOffer.find({ 
+            lastUpdated: { $lt: fortyEightHoursAgo } 
+        });
 
-        const limit = pLimit(5);
+        if (offers.length === 0) {
+            console.log("⚠️ No offers found that need updating.");
+            return { success: true, message: "No offers to update" };
+        }
+
+        console.log(`🚀 Starting price sync for ${offers.length} links...`);
+
+        let successCount = 0;
+        const limit = pLimit(5); 
 
         const tasks = offers.map((offer) => {
             return limit(async () => {
-                try {
-                    console.log(`⏳ Checking: ${offer.storeName} - Product ID: ${offer.productId}`);
+                const userAgent = new UserAgent().toString(); 
+                await delay(Math.floor(Math.random() * 2000) + 1000); 
 
-                    const { data } = await axios.get(offer.url, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                        },
-                        timeout: 15000, 
+                try {
+                    const { data } = await axios.get(offer.affiliateUrl, {
+                        headers: { "User-Agent": userAgent },
+                        timeout: 15000,
                     });
 
                     const $ = cheerio.load(data);
-                    const priceText = $(offer.priceSelector).text().trim();
-
-                    if (!priceText) throw new Error("Price selector not found");
-
+                    
+                    const selector = storeSelectors[offer.storeName]?.price;
+                    if (!selector) throw new Error(`No selector configured for ${offer.storeName}`);
+                    
+                    const priceText = $(selector).text().trim();
                     const cleanPrice = parseFloat(priceText.replace(/[^0-9.-]+/g, ""));
 
                     if (!isNaN(cleanPrice)) {
                         if (offer.currentPrice !== cleanPrice && offer.currentPrice > 0) {
+                            await PriceHistory.create({
+                                offerId: offer._id,
+                                price: offer.currentPrice,
+                                checkedAt: new Date(),
+                            });
                             offer.lastPrice = offer.currentPrice;
                         }
+
                         offer.currentPrice = cleanPrice;
                         offer.lastUpdated = new Date();
+                        offer.lastError = null;
                         await offer.save();
-                        console.log(`✅ ${offer.storeName} updated: ${cleanPrice}`);
+                        
+                        successCount++; 
+                        console.log(`✅ ${offer.storeName} updated: [${cleanPrice}]`);
+                    } else {
+                        throw new Error("Could not parse price");
                     }
                 } catch (error) {
                     console.error(`❌ Error [${offer.storeName}]: ${error.message}`);
+                    offer.lastError = error.message;
+                    await offer.save();
                 }
             });
         });
@@ -48,10 +76,12 @@ export const updatePrices = async () => {
         await Promise.all(tasks);
 
         console.log(`✨ ${LINK_OFFER_MESSAGES.SUCCESS.SCRAPER_COMPLETED}`);
-        return { success: true };
+        console.log(`📊 Summary: Successfully updated ${successCount} out of ${offers.length} offers.`);
+        
+        return { success: true, updatedCount: successCount };
 
     } catch (err) {
-        console.error(`🔴 Critical Error: ${err.message}`);
+        console.error(`🔴 Critical Scraper Error: ${err.message}`);
         return { success: false, error: err.message };
     }
 };

@@ -1,4 +1,5 @@
 import { Product } from '../models/product.model.js';
+import { LinkOffer } from '../models/linkOffer.model.js';
 import PRODUCT_MESSAGES from '../utils/messages/product.messages.js';
 
 export const addProduct = async (req, res) => {
@@ -17,6 +18,32 @@ export const addProduct = async (req, res) => {
         const savedProduct = await newProduct.save();
         
         return res.success(PRODUCT_MESSAGES.SUCCESS.CREATED, savedProduct, 201);
+    } catch (error) {
+        return res.error(PRODUCT_MESSAGES.ERROR.SERVER_ERROR, 500, error);
+    }
+};
+
+
+export const getProductBySlug = async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const userCountry = req.userCountry || 'EG';
+
+        const product = await Product.findOne({ slug });
+        if (!product) {
+            return res.error(PRODUCT_MESSAGES.ERROR.NOT_FOUND, 404);
+        }
+
+        const offers = await LinkOffer.find({ 
+            productId: product._id, 
+            country: userCountry 
+        }).sort({ currentPrice: 1 });
+
+        return res.success("Product and offers fetched successfully.", {
+            product,
+            offers
+        }, 200);
+
     } catch (error) {
         return res.error(PRODUCT_MESSAGES.ERROR.SERVER_ERROR, 500, error);
     }

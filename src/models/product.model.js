@@ -1,85 +1,29 @@
 import mongoose from 'mongoose';
 
-const APPROVED_CATEGORIES = [
-    "Cleanser",
-    "Moisturizer",
-    "Serum",
-    "Sunscreen",
-    "Toner",
-    "Exfoliator",
-    "Lip Care"
-];
-
 const productSchema = new mongoose.Schema({
-    name: { 
-        type: String, 
-        required: true, 
-        trim: true 
-    },
-    description: { 
-        type: String, 
-        required: true 
-    },    
-    category: {
-        type: String,
-        required: true,
-        enum: {
-            values: APPROVED_CATEGORIES,
-            message: '{VALUE} ليس تصنيفاً معتمداً. يرجى الاختيار من القائمة المعتمدة فقط.'
-        }
-    },
-    budget: { 
-        type: String, 
-        required: true, 
-        enum: ['economy', 'medium', 'luxury'] 
-    },
-    skinType: [
-        { 
-            type: String, 
-            required: true 
-        }
-    ],
-    origin: { 
-        type: String, 
-        required: true 
-    }, 
-    coupons: [
-        { 
-            type: String, 
-            trim: true,
-            default: ['lilycloset']
-        }
-    ], 
-    images: [
-        { 
-            type: String, 
-            required: true 
-        }
-    ], 
-    ingredients: [
-        { 
-            type: String, 
-            trim: true 
-        }
-    ] 
-}, { 
-    timestamps: true 
-});
+    name: { type: String, required: true, trim: true },
+    slug: { type: String, required: true, unique: true, lowercase: true },
+    brand: { type: String, required: true },
+    description: { type: String, required: true },
+    category: { type: String, required: true },
+    budget: { type: String, enum: ['economy', 'medium', 'luxury'], required: true },
+    skinType: [{ type: String, required: true }],
+    origin: { type: String, required: true },
+    images: [{ type: String, required: true }],
+    ingredients: [{ type: String, trim: true }]
+}, { timestamps: true });
 
 productSchema.pre('findOneAndDelete', async function(next) {
-    try {
-        const productId = this.getQuery()._id;
-        
-        const PriceOffer = mongoose.model('PriceOffer');
-        
-        await PriceOffer.deleteMany({ product: productId });
-        
-        console.log(`🧹 Cleaned up PriceOffers for deleted product: ${productId}`);
-        next();
-    } catch (error) {
-        console.error("❌ Error deleting associated PriceOffers:", error);
-        next(error);
-    }
+    const productId = this.getQuery()._id;
+    const LinkOffer = mongoose.model('LinkOffer');
+    const PriceHistory = mongoose.model('PriceHistory');
+    
+    const offers = await LinkOffer.find({ productId });
+    const offerIds = offers.map(o => o._id);
+    
+    await PriceHistory.deleteMany({ offerId: { $in: offerIds } });
+    await LinkOffer.deleteMany({ productId });
+    next();
 });
 
 export const Product = mongoose.model('Product', productSchema);
