@@ -1,39 +1,26 @@
 # syntax = docker/dockerfile:1
 
-# Adjust NODE_VERSION as desired
 ARG NODE_VERSION=22.21.1
 FROM node:${NODE_VERSION}-slim AS base
 
 LABEL fly_launch_runtime="Node.js"
-
-# Node.js app lives here
 WORKDIR /app
-
-# Set production environment
 ENV NODE_ENV="production"
 
-
-# Throw-away build stage to reduce size of final image
+# --- مرحلة البناء ---
 FROM base AS build
-
-# Install packages needed to build node modules
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential node-gyp pkg-config python-is-python3
-
-# Install node modules
+    apt-get install --no-install-recommends -y build-essential python-is-python3
 COPY package-lock.json package.json ./
 RUN npm ci
 
-# Copy application code
+# --- المرحلة النهائية (نظيفة وخفيفة) ---
+FROM base
+# نسخ مجلد الـ node_modules فقط من مرحلة البناء
+COPY --from=build /app/node_modules /app/node_modules
+# نسخ الكود المصدري فقط
 COPY . .
 
-
-# Final stage for app image
-FROM base
-
-# Copy built application
-COPY --from=build /app /app
-
-# Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
+# تأكد من أن المنفذ يتطابق مع fly.toml (غالباً 8080)
+EXPOSE 8080
 CMD [ "npm", "run", "start" ]

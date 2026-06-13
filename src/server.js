@@ -2,9 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/db.js';
-// cron job
-import cron from 'node-cron';
-import { updatePrices } from './utils/jobs/scraper.js';
 // middleware
 import {responseHandler} from './middlewares/responseHandler.js';
 // Routes
@@ -14,6 +11,7 @@ import authRoutes from './routes/auth.routes.js';
 import linkOfferRoutes from './routes/linkOffer.routes.js';
 import priceHistoryRoutes from './routes/priceHistory.routes.js';
 import subscriberRoutes from './routes/subscriber.routes.js';
+import cronRoutes from './routes/cron.routes.js';
 
 dotenv.config();
 connectDB();
@@ -32,12 +30,10 @@ app.use('/api/link-offers', linkOfferRoutes);
 app.use('/api/price-history', priceHistoryRoutes); 
 app.use('/api', consultationRoutes);
 app.use('/api/subscribe', subscriberRoutes);
+app.use('/api/cron', cronRoutes);
 app.use('/api/auth', authRoutes);
 
-cron.schedule('0 4 */2 * *', async () => {
-  console.log('⏰ Cron Job Triggered: Starting synchronization (Every 2 days)...');
-  await updatePrices();
-});
+
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
